@@ -1,9 +1,9 @@
 const cacheName = "Advin Global -NewspaperWebGL-0.0.1";
 const contentToCache = [
-    "Build/LoadFromURL.loader.js",
-    "Build/LoadFromURL.framework.js",
-    "Build/LoadFromURL.data",
-    "Build/LoadFromURL.wasm",
+    "Build/LoadFrom_URL.loader.js",
+    "Build/LoadFrom_URL.framework.js",
+    "Build/LoadFrom_URL.data",
+    "Build/LoadFrom_URL.wasm",
     "TemplateData/style.css"
 
 ];
