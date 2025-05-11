@@ -18,12 +18,17 @@
 <script type="module">
     import * as THREE from 'https://unpkg.com/three/build/three.module.js';
     import { ARButton } from 'https://unpkg.com/three/examples/jsm/webxr/ARButton.js';
+    import { GLTFLoader } from 'https://unpkg.com/three/examples/jsm/loaders/GLTFLoader.js';
 
     let camera, scene, renderer;
     let controller;
     let reticle;
     let hitTestSource = null;
     let hitTestSourceRequested = false;
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const modelUrl = urlParams.get('model');
+    let gltfModel = null;
 
     init();
     animate();
@@ -58,19 +63,28 @@
         controller.addEventListener('select', onSelect);
         scene.add(controller);
 
+        if (modelUrl) {
+        const loader = new GLTFLoader();
+        loader.load(modelUrl, (gltf) => {
+            gltfModel = gltf.scene;
+            gltfModel.scale.set(0.2, 0.2, 0.2); // Model scale (req)
+            console.log('Model loaded:', modelUrl);
+        }, undefined, (error) => {
+            console.error('Loading model error:', error);
+        });
+        }
+
         window.addEventListener('resize', onWindowResize, false);
     }
 
     function onSelect() {
-        if (!reticle.visible) return;
+    if (!reticle.visible || !gltfModel) return;
 
-        const geometry = new THREE.CylinderGeometry(0, 0.05, 0.2, 32).rotateX(Math.PI / 2);
-        const material = new THREE.MeshPhongMaterial({ color: Math.random() * 0xffffff });
-        const mesh = new THREE.Mesh(geometry, material);
-        mesh.position.setFromMatrixPosition(reticle.matrix);
-        mesh.quaternion.setFromRotationMatrix(reticle.matrix);
-        scene.add(mesh);
-    }
+    const modelClone = gltfModel.clone(true); // cloning model
+    modelClone.position.setFromMatrixPosition(reticle.matrix);
+    modelClone.quaternion.setFromRotationMatrix(reticle.matrix);
+    scene.add(modelClone);
+}
 
     function onWindowResize() {
         camera.aspect = window.innerWidth / window.innerHeight;
