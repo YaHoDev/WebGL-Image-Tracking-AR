@@ -120,7 +120,7 @@ function preloadModels() {
         },
         undefined,
         err => {
-          console.error(Error loading model ${entry.label}:, err);
+          console.error(`Error loading model ${entry.label}:`, err);
           modelObjects.push(null);
           resolve(); // continue even if failed
         }
