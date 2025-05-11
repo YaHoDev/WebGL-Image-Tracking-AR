@@ -8,6 +8,20 @@
         body { margin: 0; font-family: sans-serif; overflow: hidden; }
         #info { position: absolute; top: 10px; width: 100%; text-align: center; z-index: 1; }
     </style>
+
+    <!-- Підключення es-module-shims для підтримки import maps -->
+    <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
+
+    <!-- Визначення import map для модулів -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+            "three/examples/jsm/loaders/GLTFLoader.js": "https://unpkg.com/three@0.160.0/examples/jsm/loaders/GLTFLoader.js",
+            "three/examples/jsm/webxr/ARButton.js": "https://unpkg.com/three@0.160.0/examples/jsm/webxr/ARButton.js"
+        }
+    }
+    </script>
 </head>
 <body>
 
@@ -16,9 +30,9 @@
 </div>
 
 <script type="module">
-    import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
-    import { ARButton } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/webxr/ARButton.js';
-    import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
+    import * as THREE from 'three';
+    import { ARButton } from 'three/examples/jsm/webxr/ARButton.js';
+    import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
     let camera, scene, renderer;
     let controller;
@@ -49,7 +63,7 @@
 
         document.body.appendChild(ARButton.createButton(renderer, { requiredFeatures: ['hit-test'] }));
 
-        // Reticle setup
+        // Налаштування reticle
         const ringGeo = new THREE.RingGeometry(0.05, 0.06, 32).rotateX(-Math.PI / 2);
         const ringMat = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
         reticle = new THREE.Mesh(ringGeo, ringMat);
@@ -57,17 +71,17 @@
         reticle.visible = false;
         scene.add(reticle);
 
-        // Controller setup
+        // Налаштування контролера
         controller = renderer.xr.getController(0);
         controller.addEventListener('select', onSelect);
         scene.add(controller);
 
-        // Завантаження моделі наперед
+        // Попереднє завантаження моделі
         loader.load(
             'https://yahodev.github.io/WebGL-Image-Tracking-AR/model/lion_zenit625.glb',
             function (gltf) {
                 modelGLB = gltf.scene;
-                modelGLB.scale.set(0.2, 0.2, 0.2); // Масштаб підлаштовується під AR
+                modelGLB.scale.set(0.2, 0.2, 0.2); // Масштабування моделі
             },
             undefined,
             function (error) {
