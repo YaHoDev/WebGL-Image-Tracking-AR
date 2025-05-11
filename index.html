@@ -1,77 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <title>AR Experience</title>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <style>
-    body, html {
-      margin: 0;
-      padding: 0;
-      width: 100%;
-      height: 100%;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      background-color: #f8f8f8;
-      overflow: hidden;
-    }
-
-    .home-screen, .ar-screen {
-      position: absolute;
-      width: 100%;
-      height: 100%;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-    }
-
-    .home-screen {
-      z-index: 10;
-      background-color: #f8f8f8;
-    }
-
-    .home-screen h1 {
-      font-size: 2.5rem;
-      margin-bottom: 1rem;
-      font-weight: 600;
-      color: #111;
-    }
-
-    .home-screen p {
-      font-size: 1rem;
-      margin-bottom: 2rem;
-      color: #555;
-    }
-
-    .start-button {
-      background-color: #007aff;
-      color: white;
-      border: none;
-      border-radius: 28px;
-      padding: 16px 40px;
-      font-size: 1.1rem;
-      font-weight: 500;
-      cursor: pointer;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-      transition: all 0.2s ease;
-    }
-
-    .start-button:hover {
-      background-color: #005fce;
-    }
-
-    .ar-screen {
-      z-index: 0;
-      display: none;
-    }
+    body { margin: 0; font-family: sans-serif; overflow: hidden; }
+    #info { position: absolute; top: 10px; width: 100%; text-align: center; z-index: 1; }
 
     #model-buttons {
       position: absolute;
       bottom: 20px;
       width: 100%;
       text-align: center;
-      z-index: 2;
+      z-index: 1;
       display: none;
     }
 
@@ -90,7 +31,7 @@
       bottom: 70px;
       width: 100%;
       text-align: center;
-      z-index: 2;
+      z-index: 1;
       display: none;
     }
 
@@ -106,6 +47,7 @@
   </style>
 
   <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
+
   <script type="importmap">
   {
     "imports": {
@@ -118,17 +60,9 @@
 </head>
 <body>
 
-<div class="home-screen" id="homeScreen">
-  <h1>Experience in AR</h1>
-  <p>Step into the world of Augmented Reality</p>
-  <button class="start-button" onclick="startAR()">Start AR</button>
-</div>
-
-<div class="ar-screen" id="arScreen">
-  <div id="model-buttons"></div>
-  <div id="order-button-container">
-    <button id="order-button">To order</button>
-  </div>
+<div id="model-buttons"></div>
+<div id="order-button-container">
+  <button id="order-button">To order</button>
 </div>
 
 <script type="module">
@@ -144,7 +78,6 @@ let hitTestSourceRequested = false;
 let placedModel = null;
 let modelList = [];
 let modelObjects = [];
-
 const loader = new GLTFLoader();
 
 let lastTouchY = 0;
@@ -161,27 +94,22 @@ if (!configUrl) {
   throw new Error("Missing config parameter");
 }
 
-function startAR() {
-  document.getElementById('homeScreen').style.display = 'none';
-  document.getElementById('arScreen').style.display = 'block';
+fetch(configUrl)
+  .then(res => res.json())
+  .then(config => {
+    if (!Array.isArray(config.models)) throw new Error("Invalid config format");
 
-  fetch(configUrl)
-    .then(res => res.json())
-    .then(config => {
-      if (!Array.isArray(config.models)) throw new Error("Invalid config format");
-
-      modelList = config.models;
-      preloadModels();
-    })
-    .catch(err => {
-      console.error("Failed to load config:", err);
-      alert("Failed to load configuration file.");
-    });
-}
+    modelList = config.models;
+    preloadModels();
+  })
+  .catch(err => {
+    console.error("Failed to load config:", err);
+    alert("Failed to load configuration file.");
+  });
 
 function preloadModels() {
   const promises = modelList.map(entry =>
-    new Promise((resolve) => {
+    new Promise((resolve, reject) => {
       loader.load(
         entry.url,
         gltf => {
@@ -192,9 +120,9 @@ function preloadModels() {
         },
         undefined,
         err => {
-          console.error(`Error loading model ${entry.label}:`, err);
+          console.error(Error loading model ${entry.label}:, err);
           modelObjects.push(null);
-          resolve();
+          resolve(); // continue even if failed
         }
       );
     })
