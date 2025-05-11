@@ -1,12 +1,31 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <title>three.js AR – GLB Model Control</title>
+  <title>three.js AR – GLB Model Switch</title>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <style>
     body { margin: 0; font-family: sans-serif; overflow: hidden; }
     #info { position: absolute; top: 10px; width: 100%; text-align: center; z-index: 1; }
+
+    #model-buttons {
+      position: absolute;
+      bottom: 20px;
+      width: 100%;
+      text-align: center;
+      z-index: 1;
+      display: none;
+    }
+
+    #model-buttons button {
+      padding: 10px 20px;
+      font-size: 16px;
+      margin: 0 10px;
+      border-radius: 6px;
+      border: none;
+      background-color: rgba(255, 255, 255, 0.9);
+      cursor: pointer;
+    }
   </style>
 
   <!-- es-module-shims для підтримки import map -->
@@ -29,6 +48,11 @@
   <a href="https://threejs.org" target="_blank" rel="noopener">three.js</a> AR – GLB модель<br/>
 </div>
 
+<div id="model-buttons">
+  <button id="btn-red">Red</button>
+  <button id="btn-blue">Blue</button>
+</div>
+
 <script type="module">
 import * as THREE from 'three';
 import { ARButton } from 'three/examples/jsm/webxr/ARButton.js';
@@ -41,13 +65,17 @@ let hitTestSource = null;
 let hitTestSourceRequested = false;
 
 const loader = new GLTFLoader();
-let modelGLB = null;
 let placedModel = null;
 
 let lastTouchY = 0;
 let isRotating = false;
 let lastRotationX = 0;
 let initialAngle = 0;
+
+const models = {
+  red: null,
+  blue: null
+};
 
 init();
 animate();
@@ -80,79 +108,103 @@ function init() {
   controller.addEventListener('select', onSelect);
   scene.add(controller);
 
-  loader.load(
-    'https://yahodev.github.io/WebGL-Image-Tracking-AR/model/lion_zenit625.glb',
-    function (gltf) {
-      modelGLB = gltf.scene;
-      modelGLB.scale.set(1, 1, 1); // Масштаб 1.0
-    },
-    undefined,
-    function (error) {
-      console.error('GLB load error:', error);
-    }
-  );
+  // Preload both models
+  loader.load('https://yahodev.github.io/WebGL-Image-Tracking-AR/model/lion_zenit625.glb', gltf => {
+    models.red = gltf.scene;
+    models.red.scale.set(1, 1, 1);
+  });
+
+  loader.load('https://yahodev.github.io/WebGL-Image-Tracking-AR/model/lion_zenit31.glb', gltf => {
+    models.blue = gltf.scene;
+    models.blue.scale.set(1, 1, 1);
+  });
 
   window.addEventListener('resize', onWindowResize, false);
 
   const domElement = renderer.domElement;
 
-    domElement.addEventListener('touchstart', (event) => {
+  domElement.addEventListener('touchstart', (event) => {
     if (event.touches.length === 1) {
-        lastTouchY = event.touches[0].clientY;
-        lastRotationX = event.touches[0].clientX;
+      lastTouchY = event.touches[0].clientY;
+      lastRotationX = event.touches[0].clientX;
     } else if (event.touches.length === 2) {
-        isRotating = true;
-        initialAngle = getTouchAngle(event.touches);
+      isRotating = true;
+      initialAngle = getTouchAngle(event.touches);
     }
-    });
+  });
 
-    domElement.addEventListener('touchmove', (event) => {
+  domElement.addEventListener('touchmove', (event) => {
     if (!placedModel) return;
 
     if (event.touches.length === 1) {
-        const touch = event.touches[0];
-        const deltaX = touch.clientX - lastRotationX;
-        const deltaY = touch.clientY - lastTouchY;
+      const touch = event.touches[0];
+      const deltaX = touch.clientX - lastRotationX;
+      const deltaY = touch.clientY - lastTouchY;
 
-        placedModel.position.x += deltaX * 0.01;
-        placedModel.position.z += deltaY * 0.01;
+      placedModel.position.x += deltaX * 0.01;
+      placedModel.position.z += deltaY * 0.01;
 
-        lastRotationX = touch.clientX;
-        lastTouchY = touch.clientY;
+      lastRotationX = touch.clientX;
+      lastTouchY = touch.clientY;
     } else if (event.touches.length === 2 && isRotating) {
-        const newAngle = getTouchAngle(event.touches);
-        const angleDiff = newAngle - initialAngle;
+      const newAngle = getTouchAngle(event.touches);
+      const angleDiff = newAngle - initialAngle;
 
-        placedModel.rotation.y -= angleDiff;
-        initialAngle = newAngle;
+      placedModel.rotation.y -= angleDiff;
+      initialAngle = newAngle;
     }
-    });
+  });
 
-    domElement.addEventListener('touchend', (event) => {
+  domElement.addEventListener('touchend', (event) => {
     if (event.touches.length < 2) {
-        isRotating = false;
+      isRotating = false;
     }
-    });
+  });
 
+  // Buttons event listeners
+  document.getElementById('btn-red').addEventListener('click', () => {
+    replaceModel(models.red);
+  });
+
+  document.getElementById('btn-blue').addEventListener('click', () => {
+    replaceModel(models.blue);
+  });
 }
 
 function getTouchAngle(touches) {
   const dx = touches[1].clientX - touches[0].clientX;
   const dy = touches[1].clientY - touches[0].clientY;
-  return Math.atan2(dy, dx); // радіани
+  return Math.atan2(dy, dx);
 }
 
 function onSelect() {
-  if (!reticle.visible || !modelGLB || placedModel) return;
+  if (!reticle.visible || !models.red || placedModel) return;
 
-  placedModel = modelGLB.clone();
+  placedModel = models.red.clone();
   placedModel.position.setFromMatrixPosition(reticle.matrix);
   placedModel.quaternion.setFromRotationMatrix(reticle.matrix);
+  placedModel.scale.set(1, 1, 1);
   scene.add(placedModel);
 
   reticle.visible = false;
   hitTestSourceRequested = true;
   hitTestSource = null;
+
+  // Show buttons after model is placed
+  document.getElementById('model-buttons').style.display = 'block';
+}
+
+function replaceModel(newModel) {
+  if (!placedModel || !newModel) return;
+
+  const { position, rotation, scale } = placedModel;
+
+  scene.remove(placedModel);
+  placedModel = newModel.clone();
+  placedModel.position.copy(position);
+  placedModel.rotation.copy(rotation);
+  placedModel.scale.copy(scale);
+  scene.add(placedModel);
 }
 
 function onWindowResize() {
