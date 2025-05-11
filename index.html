@@ -47,6 +47,7 @@ let placedModel = null;
 let lastTouchY = 0;
 let isRotating = false;
 let lastRotationX = 0;
+let initialAngle = 0;
 
 init();
 animate();
@@ -95,44 +96,50 @@ function init() {
 
   const domElement = renderer.domElement;
 
-  domElement.addEventListener('touchstart', (event) => {
+    domElement.addEventListener('touchstart', (event) => {
     if (event.touches.length === 1) {
-      lastTouchY = event.touches[0].clientY;
-      lastRotationX = event.touches[0].clientX;
+        lastTouchY = event.touches[0].clientY;
+        lastRotationX = event.touches[0].clientX;
     } else if (event.touches.length === 2) {
-      lastRotationX = (event.touches[0].clientX + event.touches[1].clientX) / 2;
-      isRotating = true;
+        isRotating = true;
+        initialAngle = getTouchAngle(event.touches);
     }
-  });
+    });
 
-  domElement.addEventListener('touchmove', (event) => {
+    domElement.addEventListener('touchmove', (event) => {
     if (!placedModel) return;
 
     if (event.touches.length === 1) {
-      const touch = event.touches[0];
-      const deltaX = touch.clientX - lastRotationX;
-      const deltaY = touch.clientY - lastTouchY;
+        const touch = event.touches[0];
+        const deltaX = touch.clientX - lastRotationX;
+        const deltaY = touch.clientY - lastTouchY;
 
-      placedModel.position.x += deltaX * 0.002;
-      placedModel.position.z += deltaY * 0.002;
+        placedModel.position.x += deltaX * 0.002;
+        placedModel.position.z += deltaY * 0.002;
 
-      lastRotationX = touch.clientX;
-      lastTouchY = touch.clientY;
+        lastRotationX = touch.clientX;
+        lastTouchY = touch.clientY;
+    } else if (event.touches.length === 2 && isRotating) {
+        const newAngle = getTouchAngle(event.touches);
+        const angleDiff = newAngle - initialAngle;
+
+        placedModel.rotation.y -= angleDiff;
+        initialAngle = newAngle;
     }
+    });
 
-    if (event.touches.length === 2 && isRotating) {
-      const currentX = (event.touches[0].clientX + event.touches[1].clientX) / 2;
-      const deltaX = currentX - lastRotationX;
-      placedModel.rotation.y -= deltaX * 0.005;
-      lastRotationX = currentX;
-    }
-  });
-
-  domElement.addEventListener('touchend', (event) => {
+    domElement.addEventListener('touchend', (event) => {
     if (event.touches.length < 2) {
-      isRotating = false;
+        isRotating = false;
     }
-  });
+    });
+
+}
+
+function getTouchAngle(touches) {
+  const dx = touches[1].clientX - touches[0].clientX;
+  const dy = touches[1].clientY - touches[0].clientY;
+  return Math.atan2(dy, dx); // радіани
 }
 
 function onSelect() {
