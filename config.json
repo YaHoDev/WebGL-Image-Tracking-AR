@@ -1,0 +1,12 @@
+{
+    "models": [
+      {
+        "label": "First",
+        "url": "https://yahodev.github.io/WebGL-Image-Tracking-AR/model/lion_zenit625.glb"
+      },
+      {
+        "label": "Second",
+        "url": "https://yahodev.github.io/WebGL-Image-Tracking-AR/model/lion_zenit31.glb"
+      }
+    ]
+  }

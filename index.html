@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <title>three.js AR – GLB Model Switch</title>
+  <title>three.js AR – Dynamic Model Switch</title>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <style>
@@ -28,10 +28,8 @@
     }
   </style>
 
-  <!-- es-module-shims для підтримки import map -->
   <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
 
-  <!-- import map для three.js -->
   <script type="importmap">
   {
     "imports": {
@@ -45,13 +43,10 @@
 <body>
 
 <div id="info">
-  <a href="https://threejs.org" target="_blank" rel="noopener">three.js</a> AR – GLB модель<br/>
+  <a href="https://threejs.org" target="_blank" rel="noopener">three.js</a> AR – Dynamic Model Switch<br/>
 </div>
 
-<div id="model-buttons">
-  <button id="btn-red">Red</button>
-  <button id="btn-blue">Blue</button>
-</div>
+<div id="model-buttons"></div>
 
 <script type="module">
 import * as THREE from 'three';
@@ -63,22 +58,63 @@ let controller;
 let reticle;
 let hitTestSource = null;
 let hitTestSourceRequested = false;
-
-const loader = new GLTFLoader();
 let placedModel = null;
+let modelList = [];
+let modelObjects = [];
+const loader = new GLTFLoader();
 
 let lastTouchY = 0;
 let isRotating = false;
 let lastRotationX = 0;
 let initialAngle = 0;
 
-const models = {
-  red: null,
-  blue: null
-};
+// Load config from URL
+const urlParams = new URLSearchParams(window.location.search);
+const configUrl = urlParams.get('config');
 
-init();
-animate();
+if (!configUrl) {
+  alert("Missing ?config= parameter with path to JSON file.");
+  throw new Error("Missing config parameter");
+}
+
+fetch(configUrl)
+  .then(res => res.json())
+  .then(config => {
+    if (!Array.isArray(config.models)) throw new Error("Invalid config format");
+
+    modelList = config.models;
+    preloadModels();
+  })
+  .catch(err => {
+    console.error("Failed to load config:", err);
+  });
+
+function preloadModels() {
+  const promises = modelList.map(entry =>
+    new Promise((resolve, reject) => {
+      loader.load(
+        entry.url,
+        gltf => {
+          const model = gltf.scene;
+          model.scale.set(1, 1, 1);
+          modelObjects.push(model);
+          resolve();
+        },
+        undefined,
+        err => {
+          console.error(`Error loading model ${entry.label}:`, err);
+          modelObjects.push(null);
+          resolve(); // continue even if failed
+        }
+      );
+    })
+  );
+
+  Promise.all(promises).then(() => {
+    init();
+    animate();
+  });
+}
 
 function init() {
   scene = new THREE.Scene();
@@ -107,17 +143,6 @@ function init() {
   controller = renderer.xr.getController(0);
   controller.addEventListener('select', onSelect);
   scene.add(controller);
-
-  // Preload both models
-  loader.load('https://yahodev.github.io/WebGL-Image-Tracking-AR/model/lion_zenit625.glb', gltf => {
-    models.red = gltf.scene;
-    models.red.scale.set(1, 1, 1);
-  });
-
-  loader.load('https://yahodev.github.io/WebGL-Image-Tracking-AR/model/lion_zenit31.glb', gltf => {
-    models.blue = gltf.scene;
-    models.blue.scale.set(1, 1, 1);
-  });
 
   window.addEventListener('resize', onWindowResize, false);
 
@@ -160,15 +185,6 @@ function init() {
       isRotating = false;
     }
   });
-
-  // Buttons event listeners
-  document.getElementById('btn-red').addEventListener('click', () => {
-    replaceModel(models.red);
-  });
-
-  document.getElementById('btn-blue').addEventListener('click', () => {
-    replaceModel(models.blue);
-  });
 }
 
 function getTouchAngle(touches) {
@@ -178,9 +194,12 @@ function getTouchAngle(touches) {
 }
 
 function onSelect() {
-  if (!reticle.visible || !models.red || placedModel) return;
+  if (!reticle.visible || modelObjects.length === 0 || placedModel) return;
 
-  placedModel = models.red.clone();
+  const firstModel = modelObjects[0];
+  if (!firstModel) return;
+
+  placedModel = firstModel.clone();
   placedModel.position.setFromMatrixPosition(reticle.matrix);
   placedModel.quaternion.setFromRotationMatrix(reticle.matrix);
   placedModel.scale.set(1, 1, 1);
@@ -190,8 +209,26 @@ function onSelect() {
   hitTestSourceRequested = true;
   hitTestSource = null;
 
-  // Show buttons after model is placed
-  document.getElementById('model-buttons').style.display = 'block';
+  buildModelButtons();
+}
+
+function buildModelButtons() {
+  const container = document.getElementById('model-buttons');
+  container.innerHTML = '';
+
+  modelList.forEach((entry, index) => {
+    const model = modelObjects[index];
+    if (!model) return;
+
+    const button = document.createElement('button');
+    button.textContent = entry.label;
+    button.addEventListener('click', () => {
+      replaceModel(model);
+    });
+    container.appendChild(button);
+  });
+
+  container.style.display = 'block';
 }
 
 function replaceModel(newModel) {
