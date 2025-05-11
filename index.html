@@ -114,8 +114,8 @@ function init() {
         const deltaX = touch.clientX - lastRotationX;
         const deltaY = touch.clientY - lastTouchY;
 
-        placedModel.position.x += deltaX * 0.002;
-        placedModel.position.z += deltaY * 0.002;
+        placedModel.position.x += deltaX * 0.01;
+        placedModel.position.z += deltaY * 0.01;
 
         lastRotationX = touch.clientX;
         lastTouchY = touch.clientY;
