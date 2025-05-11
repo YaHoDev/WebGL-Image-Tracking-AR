@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>three.js ar - cones with hit test</title>
+    <title>three.js AR – GLB модель</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <style>
@@ -12,18 +12,22 @@
 <body>
 
 <div id="info">
-    <a href="https://threejs.org" target="_blank" rel="noopener">three.js</a> AR – cones with hit test<br/>
+    <a href="https://threejs.org" target="_blank" rel="noopener">three.js</a> AR – GLB модель<br/>
 </div>
 
 <script type="module">
-    import * as THREE from 'https://unpkg.com/three/build/three.module.js';
-    import { ARButton } from 'https://unpkg.com/three/examples/jsm/webxr/ARButton.js';
+    import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+    import { ARButton } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/webxr/ARButton.js';
+    import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
 
     let camera, scene, renderer;
     let controller;
     let reticle;
     let hitTestSource = null;
     let hitTestSourceRequested = false;
+
+    const loader = new GLTFLoader();
+    let modelGLB = null;
 
     init();
     animate();
@@ -58,18 +62,29 @@
         controller.addEventListener('select', onSelect);
         scene.add(controller);
 
+        // Завантаження моделі наперед
+        loader.load(
+            'https://yahodev.github.io/WebGL-Image-Tracking-AR/model/lion_zenit625.glb',
+            function (gltf) {
+                modelGLB = gltf.scene;
+                modelGLB.scale.set(0.2, 0.2, 0.2); // Масштаб підлаштовується під AR
+            },
+            undefined,
+            function (error) {
+                console.error('Помилка завантаження GLB:', error);
+            }
+        );
+
         window.addEventListener('resize', onWindowResize, false);
     }
 
     function onSelect() {
-        if (!reticle.visible) return;
+        if (!reticle.visible || !modelGLB) return;
 
-        const geometry = new THREE.CylinderGeometry(0, 0.05, 0.2, 32).rotateX(Math.PI / 2);
-        const material = new THREE.MeshPhongMaterial({ color: Math.random() * 0xffffff });
-        const mesh = new THREE.Mesh(geometry, material);
-        mesh.position.setFromMatrixPosition(reticle.matrix);
-        mesh.quaternion.setFromRotationMatrix(reticle.matrix);
-        scene.add(mesh);
+        const model = modelGLB.clone();
+        model.position.setFromMatrixPosition(reticle.matrix);
+        model.quaternion.setFromRotationMatrix(reticle.matrix);
+        scene.add(model);
     }
 
     function onWindowResize() {
@@ -88,8 +103,8 @@
             const session = renderer.xr.getSession();
 
             if (!hitTestSourceRequested) {
-                session.requestReferenceSpace('viewer').then((referenceSpace) => {
-                    session.requestHitTestSource({ space: referenceSpace }).then((source) => {
+                session.requestReferenceSpace('viewer').then((refSpace) => {
+                    session.requestHitTestSource({ space: refSpace }).then((source) => {
                         hitTestSource = source;
                     });
                 });
@@ -120,5 +135,6 @@
         renderer.render(scene, camera);
     }
 </script>
+
 </body>
 </html>
