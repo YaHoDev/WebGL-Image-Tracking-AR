@@ -1,12 +1,20 @@
 {
     "models": [
       {
-        "label": "Zenit",
-        "url": "https://yahodev.github.io/WebGL-Image-Tracking-AR/model/lion_zenit625.glb"
+        "label": "Austin",
+        "url": "https://yahodev.github.io/WebGL-Image-Tracking-AR/model/lion_austin18.glb"
       },
       {
-        "label": "Lion",
-        "url": "https://yahodev.github.io/WebGL-Image-Tracking-AR/model/lion_zenit31.glb"
+        "label": "Oscar",
+        "url": "https://yahodev.github.io/WebGL-Image-Tracking-AR/model/lion_oscar03.glb"
+      },
+      {
+        "label": "ZentiOne",
+        "url": "https://yahodev.github.io/WebGL-Image-Tracking-AR/model/lion_zenit27.glb"
+      },
+      {
+        "label": "ZentiTwo",
+        "url": "https://yahodev.github.io/WebGL-Image-Tracking-AR/model/lion_zenit625.glb"
       }
     ]
   }
