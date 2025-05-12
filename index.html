@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>AR with DOM Overlay, Close Button & Rotation</title>
+  <title>AR with DOM Overlay, Carousel Model Buttons</title>
   <style>
     body { margin: 0; overflow: hidden; }
     #overlay {
@@ -14,26 +14,64 @@
       z-index: 10;
     }
     #overlay > * { pointer-events: auto; }
+
+    /* Close button */
     #close-ar {
       position: absolute;
       top: 10px; right: 10px;
-      padding: 6px 12px; font-size: 18px;
+      padding: 6px 12px;
+      font-size: 18px;
       border: none; border-radius: 4px;
       background: rgba(255,255,255,0.9);
       cursor: pointer; z-index: 12;
     }
-    #model-buttons, #order-button-container {
-      position: absolute; width: 100%; text-align: center;
-      z-index: 11; display: none;
+
+    /* Carousel container for model buttons */
+    #model-buttons {
+      position: absolute;
+      bottom: 20px;
+      left: 50%; transform: translateX(-50%);
+      width: 80%;
+      display: none;
+      overflow-x: auto;
+      display: flex;
+      gap: 10px;
+      padding: 8px 5px;
+      background: rgba(0,0,0,0.4);
+      border-radius: 8px;
+      z-index: 11;
+      -webkit-overflow-scrolling: touch;
     }
-    #model-buttons { bottom: 20px; }
-    #order-button-container { bottom: 70px; }
-    #model-buttons button, #order-button {
-      padding: 10px 20px; font-size: 16px;
-      margin: 0 10px; border: none; border-radius: 6px;
-      background: rgba(255,255,255,0.9); cursor: pointer;
+    /* Hide scrollbar on WebKit */
+    #model-buttons::-webkit-scrollbar { display: none; }
+
+    /* Individual buttons in carousel */
+    #model-buttons button {
+      flex: 0 0 auto;
+      padding: 10px 20px;
+      font-size: 16px;
+      border: none; border-radius: 6px;
+      background: rgba(255,255,255,0.9);
+      cursor: pointer;
+      white-space: nowrap;
     }
-    #order-button { padding: 14px 40px; background: #007bff; color: white; }
+
+    /* Order button below carousel */
+    #order-button-container {
+      position: absolute;
+      bottom: 70px;
+      left: 50%; transform: translateX(-50%);
+      display: none;
+      z-index: 11;
+    }
+    #order-button {
+      padding: 14px 40px;
+      font-size: 16px;
+      border: none; border-radius: 6px;
+      background: #007bff; color: white;
+      cursor: pointer;
+      white-space: nowrap;
+    }
   </style>
 
   <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
@@ -159,16 +197,13 @@
 
     // Close AR
     document.getElementById('close-ar').addEventListener('click', () => {
-      const session = renderer.xr.getSession();
-      if (session) session.end();
+      const session = renderer.xr.getSession(); if (session) session.end();
     });
 
     // Reticle
     const ringGeo = new THREE.RingGeometry(0.05, 0.06, 32).rotateX(-Math.PI/2);
-    reticle = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: 0xffaa2a}));
-    reticle.matrixAutoUpdate = false;
-    reticle.visible = false;
-    scene.add(reticle);
+    reticle = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: 0xffaa2a }));
+    reticle.matrixAutoUpdate = false; reticle.visible = false; scene.add(reticle);
 
     controller = renderer.xr.getController(0);
     controller.addEventListener('select', onSelect);
@@ -179,36 +214,27 @@
 
   function onSelect() {
     if (!reticle.visible || placedModel) return;
-    const firstModel = modelObjects[0];
-    if (!firstModel) { alert("Model load error"); return; }
-    placedModel = firstModel.clone();
+    const model = modelObjects[0]; if (!model) { alert("Model load error"); return; }
+    placedModel = model.clone();
     placedModel.position.setFromMatrixPosition(reticle.matrix);
     placedModel.quaternion.setFromRotationMatrix(reticle.matrix);
-    placedModel.scale.set(1,1,1);
-    scene.add(placedModel);
-    reticle.visible = false;
-    hitTestSourceRequested = false;
-    hitTestSource = null;
+    placedModel.scale.set(1,1,1); scene.add(placedModel);
+    reticle.visible = false; hitTestSourceRequested = false; hitTestSource = null;
     buildModelButtons();
     if (byUrl) {
-      const orderContainer = document.getElementById('order-button-container');
-      orderContainer.style.display = 'block';
+      const oc = document.getElementById('order-button-container'); oc.style.display = 'block';
       document.getElementById('order-button').onclick = () => { window.location.href = byUrl; };
     }
   }
 
   function buildModelButtons() {
-    const container = document.getElementById('model-buttons');
-    container.innerHTML = '';
+    const container = document.getElementById('model-buttons'); container.innerHTML = '';
     modelList.forEach((entry, idx) => {
-      const model = modelObjects[idx];
-      if (!model) return;
-      const btn = document.createElement('button');
-      btn.textContent = entry.label;
-      btn.addEventListener('click', () => replaceModel(model));
-      container.appendChild(btn);
+      const m = modelObjects[idx]; if (!m) return;
+      const btn = document.createElement('button'); btn.textContent = entry.label;
+      btn.addEventListener('click', () => replaceModel(m)); container.appendChild(btn);
     });
-    container.style.display = 'block';
+    container.style.display = 'flex';
   }
 
   function replaceModel(newModel) {
@@ -216,42 +242,32 @@
     const { position, rotation, scale } = placedModel;
     scene.remove(placedModel);
     placedModel = newModel.clone();
-    placedModel.position.copy(position);
-    placedModel.rotation.copy(rotation);
-    placedModel.scale.copy(scale);
+    placedModel.position.copy(position); placedModel.rotation.copy(rotation); placedModel.scale.copy(scale);
     scene.add(placedModel);
   }
 
   function onWindowResize() {
     camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
+    camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight);
   }
 
-  function animate() {
-    renderer.setAnimationLoop(render);
-  }
+  function animate() { renderer.setAnimationLoop(render); }
 
-  function render(timestamp, frame) {
+  function render(time, frame) {
     if (frame && !placedModel) {
-      const session = renderer.xr.getSession();
-      const referenceSpace = renderer.xr.getReferenceSpace();
+      const session = renderer.xr.getSession(); const refSpace = renderer.xr.getReferenceSpace();
       if (!hitTestSourceRequested) {
         session.requestReferenceSpace('viewer')
-          .then(refSpace => session.requestHitTestSource({ space: refSpace }))
-          .then(source => { hitTestSource = source; });
-        session.addEventListener('end', () => {
-          hitTestSourceRequested = false;
-          hitTestSource = null;
-        });
+          .then(rs => session.requestHitTestSource({ space: rs }))
+          .then(src => { hitTestSource = src; });
+        session.addEventListener('end', () => { hitTestSourceRequested = false; hitTestSource = null; });
         hitTestSourceRequested = true;
       }
       if (hitTestSource) {
         const hits = frame.getHitTestResults(hitTestSource);
         if (hits.length > 0) {
-          const pose = hits[0].getPose(referenceSpace);
-          reticle.visible = true;
-          reticle.matrix.fromArray(pose.transform.matrix);
+          const pose = hits[0].getPose(refSpace);
+          reticle.visible = true; reticle.matrix.fromArray(pose.transform.matrix);
         } else reticle.visible = false;
       }
     }
