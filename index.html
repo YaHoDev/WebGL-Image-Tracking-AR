@@ -159,6 +159,11 @@
     placedModel.scale.set(1, 1, 1);
     scene.add(placedModel);
 
+    // Сховати зелене коло та зупинити хит-тест
+    reticle.visible = false;
+    hitTestSourceRequested = false;
+    hitTestSource = null;
+
     buildModelButtons();
     if (byUrl) {
       const orderContainer = document.getElementById('order-button-container');
