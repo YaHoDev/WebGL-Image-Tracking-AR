@@ -3,45 +3,38 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>AR with DOM Overlay</title>
+  <title>Inline AR Example</title>
   <style>
-    body { margin: 0; overflow: hidden; }
-    #overlay {
-      position: absolute;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      pointer-events: none;
-      z-index: 10;
-    }
-    #overlay > div {
-      pointer-events: auto;
-    }
+    body { margin: 0; overflow: hidden; background: black; }
     #model-buttons, #order-button-container {
       position: absolute;
       width: 100%; text-align: center;
-      z-index: 11;
+      z-index: 10;
       display: none;
     }
     #model-buttons { bottom: 20px; }
     #order-button-container { bottom: 70px; }
     #model-buttons button,
     #order-button {
-      padding: 10px 20px;
-      font-size: 16px;
-      margin: 0 10px;
-      border-radius: 6px;
-      border: none;
-      background: rgba(255,255,255,0.9);
+      padding: 10px 20px; font-size: 16px;
+      margin: 0 10px; border: none; border-radius: 6px;
+      background: rgba(255,255,255,0.9); cursor: pointer;
+    }
+    #order-button { background: #007bff; color: white; }
+    #start-ar {
+      position: absolute; top: 10px; left: 50%;
+      transform: translateX(-50%);
+      padding: 10px 20px; font-size: 16px;
+      border: none; border-radius: 6px;
+      background: #28a745; color: white; z-index: 10;
       cursor: pointer;
     }
-    #order-button { padding: 14px 40px; background: #007bff; color: white; }
   </style>
   <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
   <script type="importmap">
   {
     "imports": {
       "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-      "three/examples/jsm/webxr/ARButton.js": "https://unpkg.com/three@0.160.0/examples/jsm/webxr/ARButton.js",
       "three/examples/jsm/loaders/GLTFLoader.js": "https://unpkg.com/three@0.160.0/examples/jsm/loaders/GLTFLoader.js"
     }
   }
@@ -49,23 +42,21 @@
 </head>
 <body>
 
-  <div id="overlay">
-    <div id="model-buttons"></div>
-    <div id="order-button-container">
-      <button id="order-button">To order</button>
-    </div>
+  <button id="start-ar">Start AR</button>
+  <div id="model-buttons"></div>
+  <div id="order-button-container">
+    <button id="order-button">To order</button>
   </div>
 
   <script type="module">
   import * as THREE from 'three';
-  import { ARButton } from 'three/examples/jsm/webxr/ARButton.js';
   import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
   let camera, scene, renderer, controller, reticle;
   let hitTestSource = null, hitTestSourceRequested = false;
   let modelList = [], modelObjects = [], placedModel = null;
   const loader = new GLTFLoader();
-  const urlParams = new URLSearchParams(window.location.search);
+  const urlParams = new URLSearchParams(location.search);
   const configUrl = urlParams.get('config');
   const byUrl = urlParams.get('byUrl');
 
@@ -88,26 +79,29 @@
         });
       })));
     })
-    .then(() => { init(); animate(); })
+    .then(() => init())
     .catch(e=>{ console.error(e); alert("Failed to load config"); });
 
   function init() {
     scene = new THREE.Scene();
     camera = new THREE.PerspectiveCamera(70, innerWidth/innerHeight, 0.01, 20);
     scene.add(new THREE.HemisphereLight(0xffffff,0xbbbbff,1));
-    renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true });
+
+    renderer = new THREE.WebGLRenderer({ antialias:true });
     renderer.setSize(innerWidth, innerHeight);
     renderer.xr.enabled = true;
     document.body.appendChild(renderer.domElement);
 
-    // ARButton із DOM Overlay
-    const overlay = document.getElementById('overlay');
-    const sessionInit = {
-      requiredFeatures: ['hit-test','dom-overlay'],
-      optionalFeatures: ['dom-overlay'],
-      domOverlay: { root: overlay }
-    };
-    document.body.appendChild(ARButton.createButton(renderer, sessionInit));
+    // власний inline AR
+    const btn = document.getElementById('start-ar');
+    btn.addEventListener('click', async ()=>{
+      const session = await navigator.xr.requestSession('inline', {
+        requiredFeatures: ['hit-test']
+      });
+      renderer.xr.setSession(session);
+      btn.style.display = 'none';
+      animate();
+    });
 
     // ретикл
     const ring = new THREE.RingGeometry(0.05,0.06,32).rotateX(-Math.PI/2);
@@ -119,7 +113,7 @@
     controller.addEventListener('select', onSelect);
     scene.add(controller);
 
-    window.addEventListener('resize', ()=> {
+    window.addEventListener('resize', ()=>{
       camera.aspect = innerWidth/innerHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(innerWidth, innerHeight);
