@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>AR with DOM Overlay and Close Button</title>
+  <title>AR with DOM Overlay, Close Button & Rotation</title>
   <style>
     body { margin: 0; overflow: hidden; }
     #overlay {
@@ -13,37 +13,25 @@
       pointer-events: none;
       z-index: 10;
     }
-    #overlay > * {
-      pointer-events: auto;
-    }
+    #overlay > * { pointer-events: auto; }
     #close-ar {
       position: absolute;
-      top: 10px;
-      right: 10px;
-      padding: 6px 12px;
-      font-size: 18px;
-      border: none;
-      border-radius: 4px;
+      top: 10px; right: 10px;
+      padding: 6px 12px; font-size: 18px;
+      border: none; border-radius: 4px;
       background: rgba(255,255,255,0.9);
-      cursor: pointer;
-      z-index: 12;
+      cursor: pointer; z-index: 12;
     }
     #model-buttons, #order-button-container {
-      position: absolute;
-      width: 100%; text-align: center;
+      position: absolute; width: 100%; text-align: center;
       z-index: 11; display: none;
     }
     #model-buttons { bottom: 20px; }
     #order-button-container { bottom: 70px; }
-    #model-buttons button,
-    #order-button {
-      padding: 10px 20px;
-      font-size: 16px;
-      margin: 0 10px;
-      border-radius: 6px;
-      border: none;
-      background: rgba(255,255,255,0.9);
-      cursor: pointer;
+    #model-buttons button, #order-button {
+      padding: 10px 20px; font-size: 16px;
+      margin: 0 10px; border: none; border-radius: 6px;
+      background: rgba(255,255,255,0.9); cursor: pointer;
     }
     #order-button { padding: 14px 40px; background: #007bff; color: white; }
   </style>
@@ -78,6 +66,7 @@
   let hitTestSource = null, hitTestSourceRequested = false;
   let modelList = [], modelObjects = [], placedModel = null;
   let isUserInteracting = false, lastTouchX = 0, lastTouchY = 0;
+  let isRotatingGesture = false, previousRotationAngle = 0;
   const loader = new GLTFLoader();
   const urlParams = new URLSearchParams(window.location.search);
   const configUrl = urlParams.get('config');
@@ -86,6 +75,12 @@
   if (!configUrl) {
     alert("Missing ?config= parameter");
     throw new Error("Missing config");
+  }
+
+  function getTouchAngle(touches) {
+    const dx = touches[1].clientX - touches[0].clientX;
+    const dy = touches[1].clientY - touches[0].clientY;
+    return Math.atan2(dy, dx);
   }
 
   fetch(configUrl)
@@ -119,16 +114,26 @@
     renderer.xr.enabled = true;
     document.body.appendChild(renderer.domElement);
 
-    // Обробники touch для переміщення моделі на document
+    // Touch gestures for move & rotate
     document.addEventListener('touchstart', event => {
-      if (placedModel && event.touches.length === 1) {
+      if (!placedModel) return;
+      if (event.touches.length === 1) {
         isUserInteracting = true;
         lastTouchX = event.touches[0].clientX;
         lastTouchY = event.touches[0].clientY;
+      } else if (event.touches.length === 2) {
+        isRotatingGesture = true;
+        previousRotationAngle = getTouchAngle(event.touches);
       }
     });
     document.addEventListener('touchmove', event => {
-      if (isUserInteracting && event.touches.length === 1 && placedModel) {
+      if (!placedModel) return;
+      if (isRotatingGesture && event.touches.length === 2) {
+        const angle = getTouchAngle(event.touches);
+        const delta = angle - previousRotationAngle;
+        placedModel.rotation.y -= delta;
+        previousRotationAngle = angle;
+      } else if (isUserInteracting && event.touches.length === 1) {
         const touch = event.touches[0];
         const deltaX = (touch.clientX - lastTouchX) * 0.005;
         const deltaY = (touch.clientY - lastTouchY) * 0.005;
@@ -138,28 +143,28 @@
         lastTouchY = touch.clientY;
       }
     });
-    document.addEventListener('touchend', () => {
-      isUserInteracting = false;
+    document.addEventListener('touchend', event => {
+      if (event.touches.length < 2) isRotatingGesture = false;
+      if (event.touches.length === 0) isUserInteracting = false;
     });
 
-    // ARButton з DOM Overlay
+    // ARButton with DOM Overlay
     const overlayRoot = document.getElementById('overlay');
     const sessionInit = {
-      requiredFeatures: ['hit-test', 'dom-overlay'],
+      requiredFeatures: ['hit-test','dom-overlay'],
       optionalFeatures: ['dom-overlay'],
       domOverlay: { root: overlayRoot }
     };
     document.body.appendChild(ARButton.createButton(renderer, sessionInit));
 
-    // Кнопка закриття AR
-    const closeBtn = document.getElementById('close-ar');
-    closeBtn.addEventListener('click', () => {
+    // Close AR
+    document.getElementById('close-ar').addEventListener('click', () => {
       const session = renderer.xr.getSession();
       if (session) session.end();
     });
 
-    // Ретикл
-    const ringGeo = new THREE.RingGeometry(0.05, 0.06, 32).rotateX(-Math.PI / 2);
+    // Reticle
+    const ringGeo = new THREE.RingGeometry(0.05, 0.06, 32).rotateX(-Math.PI/2);
     reticle = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: 0x00ff00 }));
     reticle.matrixAutoUpdate = false;
     reticle.visible = false;
@@ -176,18 +181,14 @@
     if (!reticle.visible || placedModel) return;
     const firstModel = modelObjects[0];
     if (!firstModel) { alert("Model load error"); return; }
-
     placedModel = firstModel.clone();
     placedModel.position.setFromMatrixPosition(reticle.matrix);
     placedModel.quaternion.setFromRotationMatrix(reticle.matrix);
-    placedModel.scale.set(1, 1, 1);
+    placedModel.scale.set(1,1,1);
     scene.add(placedModel);
-
-    // Сховати ретикл та скинути хіт-тест
     reticle.visible = false;
     hitTestSourceRequested = false;
     hitTestSource = null;
-
     buildModelButtons();
     if (byUrl) {
       const orderContainer = document.getElementById('order-button-container');
@@ -246,10 +247,9 @@
         hitTestSourceRequested = true;
       }
       if (hitTestSource) {
-        const hitTestResults = frame.getHitTestResults(hitTestSource);
-        if (hitTestResults.length > 0) {
-          const hit = hitTestResults[0];
-          const pose = hit.getPose(referenceSpace);
+        const hits = frame.getHitTestResults(hitTestSource);
+        if (hits.length > 0) {
+          const pose = hits[0].getPose(referenceSpace);
           reticle.visible = true;
           reticle.matrix.fromArray(pose.transform.matrix);
         } else reticle.visible = false;
