@@ -119,16 +119,15 @@
     renderer.xr.enabled = true;
     document.body.appendChild(renderer.domElement);
 
-    // Додати обробники touch для переміщення моделі
-    const dom = renderer.domElement;
-    dom.addEventListener('touchstart', event => {
+    // Обробники touch для переміщення моделі на document
+    document.addEventListener('touchstart', event => {
       if (placedModel && event.touches.length === 1) {
         isUserInteracting = true;
         lastTouchX = event.touches[0].clientX;
         lastTouchY = event.touches[0].clientY;
       }
     });
-    dom.addEventListener('touchmove', event => {
+    document.addEventListener('touchmove', event => {
       if (isUserInteracting && event.touches.length === 1 && placedModel) {
         const touch = event.touches[0];
         const deltaX = (touch.clientX - lastTouchX) * 0.005;
@@ -139,7 +138,7 @@
         lastTouchY = touch.clientY;
       }
     });
-    dom.addEventListener('touchend', event => {
+    document.addEventListener('touchend', () => {
       isUserInteracting = false;
     });
 
@@ -184,7 +183,7 @@
     placedModel.scale.set(1, 1, 1);
     scene.add(placedModel);
 
-    // Сховати зелене коло та зупинити хит-тест
+    // Сховати ретикл та скинути хіт-тест
     reticle.visible = false;
     hitTestSourceRequested = false;
     hitTestSource = null;
