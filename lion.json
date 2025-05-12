@@ -1,11 +1,11 @@
 {
     "models": [
       {
-        "label": "First",
+        "label": "Zenit",
         "url": "https://yahodev.github.io/WebGL-Image-Tracking-AR/model/lion_zenit625.glb"
       },
       {
-        "label": "Second",
+        "label": "Lion",
         "url": "https://yahodev.github.io/WebGL-Image-Tracking-AR/model/lion_zenit31.glb"
       }
     ]
