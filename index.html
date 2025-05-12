@@ -18,8 +18,8 @@
     }
     #close-ar {
       position: absolute;
-      top: 20px;
-      right: 15px;
+      top: 10px;
+      right: 10px;
       padding: 6px 12px;
       font-size: 18px;
       border: none;
@@ -77,6 +77,7 @@
   let camera, scene, renderer, controller, reticle;
   let hitTestSource = null, hitTestSourceRequested = false;
   let modelList = [], modelObjects = [], placedModel = null;
+  let isUserInteracting = false, lastTouchX = 0, lastTouchY = 0;
   const loader = new GLTFLoader();
   const urlParams = new URLSearchParams(window.location.search);
   const configUrl = urlParams.get('config');
@@ -117,6 +118,30 @@
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.xr.enabled = true;
     document.body.appendChild(renderer.domElement);
+
+    // Додати обробники touch для переміщення моделі
+    const dom = renderer.domElement;
+    dom.addEventListener('touchstart', event => {
+      if (placedModel && event.touches.length === 1) {
+        isUserInteracting = true;
+        lastTouchX = event.touches[0].clientX;
+        lastTouchY = event.touches[0].clientY;
+      }
+    });
+    dom.addEventListener('touchmove', event => {
+      if (isUserInteracting && event.touches.length === 1 && placedModel) {
+        const touch = event.touches[0];
+        const deltaX = (touch.clientX - lastTouchX) * 0.005;
+        const deltaY = (touch.clientY - lastTouchY) * 0.005;
+        placedModel.position.x += deltaX;
+        placedModel.position.z += deltaY;
+        lastTouchX = touch.clientX;
+        lastTouchY = touch.clientY;
+      }
+    });
+    dom.addEventListener('touchend', event => {
+      isUserInteracting = false;
+    });
 
     // ARButton з DOM Overlay
     const overlayRoot = document.getElementById('overlay');
