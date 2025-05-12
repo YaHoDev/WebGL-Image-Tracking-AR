@@ -106,7 +106,7 @@
   function init() {
     scene = new THREE.Scene();
     camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 20);
-    scene.add(new THREE.HemisphereLight(0xffffff, 0xffaa2a, 1));
+    scene.add(new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1));
 
     renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setPixelRatio(window.devicePixelRatio);
@@ -165,7 +165,7 @@
 
     // Reticle
     const ringGeo = new THREE.RingGeometry(0.05, 0.06, 32).rotateX(-Math.PI/2);
-    reticle = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: 0x00ff00 }));
+    reticle = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: 0xffaa2a}));
     reticle.matrixAutoUpdate = false;
     reticle.visible = false;
     scene.add(reticle);
